@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Um reset básico para ficar bonito */
+body {
+  @apply bg-gray-200 text-zinc-50 antialiased;
+
+  h1 {
+    @apply font-bold text-gray-600;
+  }
+
+  span {
+    @apply text-sm text-gray-500;
+  }
+}
