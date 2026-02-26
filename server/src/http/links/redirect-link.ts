@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { urls } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import z from "zod";
 
@@ -26,20 +28,19 @@ export const redirectLink: FastifyPluginAsyncZod = async (server) => {
     try {
       const { shortUrl } = request.params;
 
-      const link = await prisma.url.update({
-        where: { 
-          shortUrl,
-          isDeleted: false,
-        },
-        // incrementa a quantidade de acessos de um link
-        data: {
-          userCounter: { increment: 1 },
-        },
-      });
+      // incrementa a quantidade de acessos e retorna o link
+      const [link] = await db
+        .update(urls)
+        .set({ userCounter: sql`${urls.userCounter} + 1` })
+        .where(and(eq(urls.shortUrl, shortUrl), eq(urls.isDeleted, false)))
+        .returning();
+
+      if (!link) {
+        return reply.status(404).send({ message: "Short URL not found" });
+      }
 
       // obter a URL original por meio de uma URL encurtada
-      const originalUrl = link.originalUrl;
-      reply.status(200).send({ originalUrl });
+      reply.status(200).send({ originalUrl: link.originalUrl });
     } catch (error) {
       return reply.status(404).send({ message: "Short URL not found" });
     }

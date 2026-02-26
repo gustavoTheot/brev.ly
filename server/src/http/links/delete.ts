@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { urls } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 
@@ -17,11 +19,10 @@ export const deleteLink: FastifyPluginAsyncZod = async (server) => {
   {
     const { id } = request.params;
 
-    // Delete logic
-    await prisma.url.update({
-      where: { id },
-      data: { isDeleted: true },
-    });
+    await db
+      .update(urls)
+      .set({ isDeleted: true })
+      .where(eq(urls.id, id));
 
     return reply.status(204).send();
   });

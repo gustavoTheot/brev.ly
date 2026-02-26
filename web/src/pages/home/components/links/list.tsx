@@ -24,7 +24,7 @@ export function List() {
   }
 
   return (
-    <div>
+    <div className="max-h-[350px] overflow-y-scroll scroll-smooth">
       { links.length === 0 ? (
         <div className="flex flex-col items-center gap-2 mt-10">
           <BrushCleaning className="text-zinc-300" size={32} />

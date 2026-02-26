@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { urls } from "@/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import z from "zod";
 
@@ -17,14 +19,13 @@ export const getLink: FastifyPluginAsyncZod = async (server) => {
   {
     const { id } = request.params;
 
-    const links = await prisma.url.findUnique({
-      where: { 
-        id,
-        isDeleted: false,
-      },
-    });
+    const [link] = await db
+      .select()
+      .from(urls)
+      .where(and(eq(urls.id, id), eq(urls.isDeleted, false)))
+      .limit(1);
     
-    return reply.send(links);
+    return reply.send(link ?? null);
   });
 
   server.get('/link', 
@@ -36,14 +37,12 @@ export const getLink: FastifyPluginAsyncZod = async (server) => {
     }, 
     async (request, reply) => 
   {
-    const links = await prisma.url.findMany({
-      where: {
-        isDeleted: false,
-      }, 
-      orderBy: {
-        createdAt: 'desc',
-      }
-    });
+    const links = await db
+      .select()
+      .from(urls)
+      .where(eq(urls.isDeleted, false))
+      .orderBy(desc(urls.createdAt));
+
     return reply.send(links);
   });
 }

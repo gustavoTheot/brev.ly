@@ -1,7 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import { db, pg } from "@/db";
+import { urls } from "@/db/schema";
 import { uploadFileToStorage } from "@/storage/upload-file";
 import { stringify } from "csv-stringify";
-import { PassThrough, Readable } from "node:stream";
+import { eq, and, ilike, desc } from "drizzle-orm";
+import { PassThrough, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import z from "zod";
 
@@ -20,51 +22,30 @@ export async function exportFile(
 ): Promise<ExportUploadsOutput> {
   const { searchQuery } = exportUploadsInput.parse(input);
 
-  const where = searchQuery ? {
-    originalUrl: {
-      contains: searchQuery,
-    },
-  } : {};
+  const {sql, params} = db
+    .select({
+      id: urls.id,
+      originalUrl: urls.originalUrl,
+      shortUrl: urls.shortUrl,
+      createdAt: urls.createdAt,
+      userCounter: urls.userCounter,
+    })
+    .from(urls)
+    .where(
+      and(
+        eq(urls.isDeleted, false),
+        searchQuery ? ilike(urls.originalUrl, `%${searchQuery}`) : undefined
+      )
+    )
+    .orderBy(desc(urls.createdAt))
+    .toSQL();
 
-  const dbStream = Readable.from(async function* () {
-    const BATCH_SIZE = 500;
-    let cursor: string | undefined = undefined;
-
-    while (true) {
-      const batch = await prisma.url.findMany({
-        take: BATCH_SIZE,
-        skip: cursor ? 1 : 0,
-        cursor: cursor ? { id: cursor } : undefined,
-        where: {
-          ...where,
-          isDeleted: false,
-        },
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          originalUrl: true,
-          shortUrl: true,
-          createdAt: true,
-          userCounter: true
-        }
-      });
-
-      if (batch.length === 0) break;
-
-      for (const item of batch) {
-        yield item;
-      }
-
-      cursor = batch[batch.length - 1].id;
-
-      if (batch.length < BATCH_SIZE) break;
-    }
-  }());
+  const cursor = pg.unsafe(sql, params as string[]).cursor(100)
 
   const csvStream = stringify({
     delimiter: ',',
     header: true,
-   columns: [
+    columns: [
       { key: "originalUrl", header: "Original URL" },
       { key: "shortUrl", header: "Short Code" },
       { key: "userCounter", header: "Clicks" },
@@ -73,23 +54,31 @@ export async function exportFile(
     cast: {
       date: (date) => date.toISOString(),
     }
-  })
+  });
 
-  const uploadPassThrough = new PassThrough();
-
-  const randomFileName = `${new Date().toISOString()}-links.csv`;
+  const uploadToStorageStream = new PassThrough();
 
   const uploadToStoragePromise = uploadFileToStorage({
     contentType: 'text/csv',
     folder: 'downloads',
-    fileName: randomFileName,
-    contentStream: uploadPassThrough,
+    fileName: `${new Date().toISOString()}-links.csv`,
+    contentStream: uploadToStorageStream,
   });
 
   const pipelinePromise = pipeline(
-    dbStream,
+    cursor,
+    new Transform({
+      objectMode: true,
+      transform(chunks: any[], _encoding, callback) {
+        // O cursor do postgres.js entrega um array de objetos por "fetch"
+        for (const chunk of chunks) {
+          this.push(chunk);
+        }
+        callback();
+      },
+    }),
     csvStream,
-    uploadPassThrough
+    uploadToStorageStream
   );
 
   const [uploadResult] = await Promise.all([
@@ -97,7 +86,7 @@ export async function exportFile(
     pipelinePromise
   ]);
 
-  return { 
+  return ({ 
     reportUrl: uploadResult.url 
-  };
+  });
 }

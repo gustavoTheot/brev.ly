@@ -1,5 +1,7 @@
 import { checkCharacters } from "@/helper/check-characters";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db";
+import { urls } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import z from "zod";
 
@@ -31,11 +33,11 @@ export const createLink: FastifyPluginAsyncZod = async (server) => {
     const { originUrl, shortUrl } = request.body;
 
     if (shortUrl) {
-      const existingLink = await prisma.url.findUnique({
-        where: { 
-          shortUrl, 
-        },
-      });
+      const [existingLink] = await db
+        .select()
+        .from(urls)
+        .where(eq(urls.shortUrl, shortUrl))
+        .limit(1);
 
       if (existingLink) {
         return reply.status(400).send({ message: "Short URL already exists" });
@@ -45,14 +47,11 @@ export const createLink: FastifyPluginAsyncZod = async (server) => {
         return reply.status(400).send({ message: "Short URL can only contain letters, numbers, and hyphens" });
       }
     }
-    
 
-    const newLink = await prisma.url.create({
-      data: {
-        originalUrl: originUrl,
-        shortUrl,
-      }
-    });
+    const [newLink] = await db
+      .insert(urls)
+      .values({ originalUrl: originUrl, shortUrl })
+      .returning();
 
     return reply.send(newLink);
   });
