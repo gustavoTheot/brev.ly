@@ -70,7 +70,6 @@ export async function exportFile(
     new Transform({
       objectMode: true,
       transform(chunks: any[], _encoding, callback) {
-        // O cursor do postgres.js entrega um array de objetos por "fetch"
         for (const chunk of chunks) {
           this.push(chunk);
         }
