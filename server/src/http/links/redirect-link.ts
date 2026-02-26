@@ -31,11 +31,13 @@ export const redirectLink: FastifyPluginAsyncZod = async (server) => {
           shortUrl,
           isDeleted: false,
         },
+        // incrementa a quantidade de acessos de um link
         data: {
           userCounter: { increment: 1 },
         },
       });
 
+      // obter a URL original por meio de uma URL encurtada
       const originalUrl = link.originalUrl;
       reply.status(200).send({ originalUrl });
     } catch (error) {

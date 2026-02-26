@@ -1,5 +1,5 @@
 import type { LinkResponse } from "../../../../dto/link-DTO";
-import { Copy, Trash } from "lucide-react";
+import { BrushCleaning, Copy, Trash } from "lucide-react";
 import { useEffect } from "react";
 import { useLinkStore } from "../../../../store/useLinks";
 
@@ -7,10 +7,7 @@ export function List() {
   const { links, remove, getAll } = useLinkStore();
 
   useEffect(() => {
-    // 1. Busca inicial
     getAll();
-
-    // 2. Função que recarrega os dados
     const handleWindowFocus = () => {
       getAll();
     };
@@ -28,17 +25,24 @@ export function List() {
 
   return (
     <div>
-      {links.map((link: LinkResponse) => (
+      { links.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 mt-10">
+          <BrushCleaning className="text-zinc-300" size={32} />
+          <span className="text-zinc-300! font-semibold">Nenhum link encurtado ainda</span>
+        </div>
+      ) :
+
+      links.map((link: LinkResponse) => (
         <div
-          className="flex flex-row justify-between border-t border-gray-200 p-2"
+          className="flex flex-row justify-between items-center border-t border-gray-200 p-2 gap-2 min-w-0"
           key={link.id}
         >
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0 flex-1">
             <div className="group relative">
               <a 
                 href={`/redirect/${link.shortUrl}`}
                 target="_blank"
-                className="cursor-pointer block max-w-[14rem] truncate text-blue-700! font-semibold">
+                className="cursor-pointer block truncate text-blue-700! font-semibold">
                 {link.shortUrl}
               </a>
 
@@ -46,21 +50,21 @@ export function List() {
             
             <div className="group relative">
               <a 
-                className="cursor-pointer block max-w-[20rem] truncate text-gray-600"
+                className="cursor-pointer block truncate text-gray-600 text-sm"
                 href={link?.originalUrl} 
                 target="_blank"
                 rel="noreferrer"
               >
                 {link.originalUrl}
               </a>
-              <span className="absolute hidden group-hover:block bg-gray-800 text-gray-300 text-sm rounded p-2 mt-1 z-10">
+              <span className="absolute hidden group-hover:block bg-gray-800 text-gray-300 text-sm rounded p-2 mt-1 z-10 max-w-xs break-all">
                 {link.originalUrl}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-row items-center gap-2">
-            <span>
+          <div className="flex flex-row items-center gap-2 shrink-0">
+            <span className="text-sm text-gray-500 hidden sm:inline">
               {link.userCounter} {link.userCounter === 1 ? "acesso" : "acessos"}
             </span>
             

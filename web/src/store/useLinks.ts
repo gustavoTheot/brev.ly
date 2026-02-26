@@ -9,15 +9,16 @@ import { downloadUrl } from '../util/download-url';
 interface LinkStore {
   links: LinkResponse[];
   createLink: (data: LinkProps) => Promise<void>;
-  getAll: () => Promise<void>;
+  getAll: () => Promise<LinkResponse[]>;
   remove: (id: string) => Promise<boolean>;
   getOriginUrl: (shortUrl: string) => Promise<string | undefined>;
+  downloadCsv: () => Promise<void>;
 }
 
 enableMapSet();
 
 export const useLinkStore = create<LinkStore, [["zustand/immer", never]]>(
-  immer((set, get) => {
+  immer((set,) => {
     async function createLink(data: LinkProps) {
       try {
         const { originUrl, shortUrl } = data;
@@ -41,6 +42,8 @@ export const useLinkStore = create<LinkStore, [["zustand/immer", never]]>(
         set(state => {
           state.links = response.data
         });
+
+        return response.data;
       } catch (error) {
         console.error(error);
       }
@@ -53,6 +56,7 @@ export const useLinkStore = create<LinkStore, [["zustand/immer", never]]>(
         set(state => {
           state.links = state.links.filter(link => link.id !== id);
         });
+        return true;
       } catch (error) {
         console.error(error);
         toast.error("Erro ao deletar o link encurtado");

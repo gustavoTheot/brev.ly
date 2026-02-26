@@ -2,6 +2,7 @@ import { exportFile } from "@/service/export-file";
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import z from "zod";
 
+// exportar os links criados em um CSV
 export const exportCSV: FastifyPluginAsyncZod = async (server) => {
   server.post('/uploads/export-csv', {
     schema: {

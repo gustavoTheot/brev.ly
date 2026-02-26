@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import z from "zod";
 
+// criar um link
 export const createLink: FastifyPluginAsyncZod = async (server) => {
   server.post('/link', 
     {
